@@ -1,552 +1,964 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#080d19">
-<title>CloudPhone Emulator</title>
+<title>CloudPhone — Virtual Device Portal</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#080d19;color:white;font-family:Arial,sans-serif}
-.phone{width:370px;height:760px;max-width:96vw;max-height:94dvh;
- padding:9px;border:7px solid #343b49;border-radius:43px;
- background:#05070c;box-shadow:0 25px 90px #000b;position:relative}
-.screen{height:100%;border-radius:29px;overflow:hidden;
- background:#101827;position:relative;display:flex;flex-direction:column}
-.notch{position:absolute;z-index:20;top:0;left:50%;transform:translateX(-50%);
- width:110px;height:23px;background:#05070c;border-radius:0 0 16px 16px}
-.status{height:35px;min-height:35px;padding:7px 17px;
- display:flex;justify-content:space-between;font-size:11px;font-weight:bold}
-.viewport{flex:1;overflow:auto;scrollbar-width:thin;scrollbar-color:#475569 transparent}
-.nav{height:48px;min-height:48px;background:#080d17;
- border-top:1px solid #293548;display:flex;align-items:center;justify-content:space-around}
-.nav button{width:33%;height:100%;font-size:21px;color:#dbeafe}
-.appicon{height:58px;width:58px;border-radius:17px;display:grid;
- place-items:center;font-size:28px;margin:auto;box-shadow:0 4px 14px #0005}
-.tile{text-align:center;cursor:pointer;min-width:75px}
-.tile p{font-size:11px;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080d19;color:#e5edf9;font:14px Inter,system-ui,Arial,sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}
+.shell{width:min(100%,430px);height:min(850px,96dvh);padding:9px;border:7px solid #344054;border-radius:46px;background:#030712;box-shadow:0 25px 90px #000b}
+.screen{height:100%;border-radius:31px;overflow:hidden;background:#101827;display:flex;flex-direction:column;position:relative}
+.notch{position:absolute;z-index:5;top:0;left:50%;transform:translateX(-50%);width:112px;height:23px;background:#030712;border-radius:0 0 15px 15px}
+.status{height:36px;min-height:36px;padding:8px 17px;display:flex;justify-content:space-between;font-size:11px;font-weight:700}
+.viewport{flex:1;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:#475569 transparent}
+.nav{height:49px;min-height:49px;background:#080d17;border-top:1px solid #293548;display:flex;justify-content:space-around;align-items:center}
+.nav button{width:33%;height:100%;font-size:21px;color:#e2e8f0}
+.field{width:100%;background:#0b1423;border:1px solid #394b64;border-radius:10px;padding:11px;color:#fff;outline:none}
+.field:focus{border-color:#60a5fa}
 .card{background:#1a293d;border:1px solid #304158;border-radius:14px;padding:13px}
-.field{width:100%;background:#0b1423;border:1px solid #394b64;
- border-radius:10px;padding:11px;color:white;outline:none;font-size:13px}
-.field:focus{border-color:#3b82f6}
-.btn{background:#2563eb;color:white;padding:10px 14px;border-radius:9px;
- font-size:12px;font-weight:bold}
+.btn{background:#2563eb;color:white;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:700}
+.btn:disabled{opacity:.5;cursor:default}
 .btn2{background:#304158;color:white;padding:10px 14px;border-radius:9px;font-size:12px}
 .muted{font-size:11px;color:#94a3b8}
-.progress{height:7px;background:#334155;border-radius:10px;overflow:hidden}
-.progress>div{height:100%;width:0;background:#38bdf8;transition:width .15s}
-.item{display:flex;align-items:center;gap:12px;padding:12px;
- border-bottom:1px solid #334155}
-.item:last-child{border:0}
+.appgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px 5px}
+.tile{text-align:center;min-width:0;cursor:pointer}
+.appicon{height:55px;width:55px;border-radius:17px;display:grid;place-items:center;font-size:27px;margin:auto;box-shadow:0 4px 14px #0005}
+.tile p{font-size:10px;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.progress{height:7px;background:#334155;border-radius:20px;overflow:hidden}
+.progress>div{height:100%;width:0;background:#38bdf8;transition:width .18s}
+.rowitem{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #334155}
+.toast{position:fixed;z-index:50;left:50%;bottom:20px;transform:translateX(-50%);background:#2563eb;color:white;padding:11px 16px;border-radius:12px;box-shadow:0 5px 25px #0008;max-width:90vw}
 .hidden{display:none!important}
-#toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);
- background:#2563eb;padding:11px 18px;border-radius:12px;font-size:12px;
- z-index:100;white-space:nowrap}
 iframe{width:100%;height:100%;border:0;background:white}
-.preview{max-width:100%;max-height:420px;object-fit:contain}
+.preview{max-width:100%;max-height:440px;object-fit:contain}
+.danger{color:#f87171}
 </style>
 </head>
 <body>
-<main class="min-h-screen flex items-center justify-center p-2">
- <div class="phone">
-  <div class="screen">
-   <div class="notch"></div>
-   <div class="status">
-    <span id="clock">12:00</span>
-    <span>● ▰ ▣ 100%</span>
-   </div>
-   <div id="view" class="viewport"></div>
-   <div class="nav">
-    <button onclick="back()">‹</button>
-    <button onclick="home()">●</button>
-    <button onclick="recent()">▣</button>
-   </div>
-  </div>
- </div>
-</main>
-<div id="toast" class="hidden"></div>
+<div class="min-h-screen flex flex-col items-center justify-center p-2">
+<header class="w-full max-w-6xl flex flex-wrap items-center justify-between gap-3 px-2 py-3 mb-2">
+<div>
+<div class="font-bold text-xl">☁ CloudPhone</div>
+<div class="muted">Virtual Device Management Portal · Local Simulator</div>
+</div>
+<div class="flex flex-wrap gap-2 items-center">
+<select id="profileSelect" class="field !w-auto" aria-label="Device profile"></select>
+<button class="btn" id="newDeviceBtn">+ New Device</button>
+<select id="regionSelect" class="field !w-auto" aria-label="Region">
+<option value="US">US Region</option>
+<option value="UK">UK Region</option>
+<option value="SG">SG Region</option>
+<option value="DE">DE Region</option>
+</select>
+</div>
+</header>
+
+<div class="w-full max-w-6xl flex justify-center">
+<div class="shell">
+<div class="screen">
+<div class="notch"></div>
+<div class="status"><span id="clock">12:00</span><span>● ▰ ▣ 100%</span></div>
+<main id="view" class="viewport" aria-live="polite"></main>
+<nav class="nav" aria-label="Phone navigation">
+<button id="backBtn" aria-label="Back">‹</button>
+<button id="homeBtn" aria-label="Home">●</button>
+<button id="recentBtn" aria-label="Recent apps">▣</button>
+</nav>
+</div>
+</div>
+</div>
+<p class="muted mt-3 text-center">CloudOS simulator · Apps and accounts are demo-only and stored in this browser</p>
+</div>
+<div id="toast" class="toast hidden" role="status"></div>
 
 <script>
 "use strict";
 
-/* CLOUDPHONE LOCAL ENVIRONMENT */
+/* CloudPhone is a browser simulator, not a hosted Android VM. */
+const STORAGE_KEY = "cloudphone_portal_v6";
+const DB_NAME = "cloudphone_files_v2";
+const DB_STORE = "blobs";
 
-const KEY="cloudphone_v3";
-const DB="CloudPhoneFiles";
-let state=load();
-let page="home",stack=[],recentPages=[];
-let timers={};
-let objectUrls=[];
-
-function id(){
- return "app_"+Math.random().toString(36).slice(2,10);
-}
-function load(){
- try{
-  let x=JSON.parse(localStorage.getItem(KEY));
-  if(x&&x.devices?.length)return x;
- }catch(e){}
- let d={id:id(),name:"My Cloud Phone",region:"US",email:"",
-  apps:[],files:[],history:[]};
- return {active:d.id,devices:[d]};
-}
-function save(){
- try{localStorage.setItem(KEY,JSON.stringify(state))}
- catch(e){notify("Storage limit reached")}
-}
-function dev(){return state.devices.find(x=>x.id===state.active)}
-function notify(s){
- let t=document.getElementById("toast");
- t.textContent=s;t.classList.remove("hidden");
- clearTimeout(window._toast);
- window._toast=setTimeout(()=>t.classList.add("hidden"),2300);
-}
-function esc(s){
- return String(s).replace(/[&<>"']/g,c=>({
- "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
- }[c]));
-}
-function icon(emoji,color="#2563eb"){
- return `<div class="appicon" style="background:${color}">${emoji}</div>`;
-}
-function tile(emoji,name,action,color){
- return `<div class="tile" onclick="${action}">
- ${icon(emoji,color)}<p>${esc(name)}</p></div>`;
-}
-function go(p){
- if(page!==p){stack.push(page);recentPages.unshift(page);
- recentPages=[...new Set(recentPages)].slice(0,8)}
- page=p;render();
-}
-function home(){stack=[];page="home";render()}
-function back(){
- if(stack.length){page=stack.pop();render()}
- else home();
-}
-function recent(){go("recent")}
-function render(){
- const v=document.getElementById("view");
- const routes={
-  home:homeView,store:storeView,signin:signinView,
-  files:filesView,settings:settingsView,
-  browser:browserView,recent:recentView
- };
- if(page.startsWith("file:"))v.innerHTML=fileView(page.slice(5));
- else if(page.startsWith("app:"))v.innerHTML=appView(page.slice(4));
- else v.innerHTML=(routes[page]||homeView)();
- if(page==="files")bindFiles();
-}
-function homeView(){
- let d=dev();
- let builtin=[
-  tile("▶️","Play Store","openStore()","#2563eb"),
-  tile("🌐","Browser","go('browser')","#0284c7"),
-  tile("📁","File Manager","go('files')","#b45309"),
-  tile("⚙️","Settings","go('settings')","#475569")
- ];
- let installed=d.apps.map(a=>tile(a.icon||"📦",a.name,
-  `launch('${a.id}')`,a.color||"#6d28d9"));
- return `<div class="p-4 pt-9 min-h-full" style="background:
- linear-gradient(160deg,#152744,#101827 65%)">
-  <div class="text-center pt-8 pb-9">
-   <div class="text-5xl mb-3">☁️</div>
-   <h1 class="text-2xl font-bold">CloudPhone</h1>
-   <p class="muted mt-2">${esc(d.name)} · ${d.region}</p>
-   <p class="text-xs text-slate-400 mt-1" id="homeDate"></p>
-  </div>
-  <div class="grid grid-cols-4 gap-y-8 gap-x-1">${builtin.join("")}</div>
-  ${installed.length?`
-   <div class="mt-9">
-    <h3 class="text-xs text-slate-300 mb-5 font-bold">INSTALLED APPS</h3>
-    <div class="grid grid-cols-4 gap-y-7">${installed.join("")}</div>
-   </div>`:""}
-  <div class="mt-12 text-center">
-   <p class="muted">Your personal virtual device</p>
-  </div>
- </div>`;
-}
-
-/* STORE - LOCAL DEMO CATALOG */
-
-const catalog=[
- {id:"whatsapp",name:"WhatsApp",icon:"💬",color:"#168b51",size:25,
-  category:"Communication",description:"A simulated messaging application."},
- {id:"youtube",name:"YouTube",icon:"▶️",color:"#dc2626",size:35,
-  category:"Video",description:"A demo video browsing application."},
- {id:"telegram",name:"Telegram",icon:"✈️",color:"#0284c7",size:20,
-  category:"Communication",description:"A simulated messaging application."},
- {id:"freefire",name:"Free Fire",icon:"🔥",color:"#c2410c",size:80,
-  category:"Games",description:"A demo game launcher."},
- {id:"pubg",name:"PUBG Mobile",icon:"🎮",color:"#a16207",size:100,
-  category:"Games",description:"A demo game launcher."},
- {id:"calculator",name:"Calculator",icon:"🧮",color:"#475569",size:5,
-  category:"Tools",description:"A functional calculator."},
- {id:"notes",name:"Notes",icon:"📝",color:"#ca8a04",size:5,
-  category:"Productivity",description:"A local notes application."}
+const CATALOG = [
+{id:"whatsapp",name:"WhatsApp",emoji:"💬",color:"#168b51",size:25,category:"Communication",kind:"chat"},
+{id:"youtube",name:"YouTube",emoji:"▶️",color:"#dc2626",size:35,category:"Video",kind:"video"},
+{id:"telegram",name:"Telegram",emoji:"✈️",color:"#0284c7",size:20,category:"Communication",kind:"chat"},
+{id:"freefire",name:"Free Fire",emoji:"🔥",color:"#c2410c",size:80,category:"Games",kind:"game"},
+{id:"pubg",name:"PUBG Mobile",emoji:"🎮",color:"#a16207",size:100,category:"Games",kind:"game"},
+{id:"calculator",name:"Calculator",emoji:"🧮",color:"#475569",size:2,category:"Tools",kind:"calculator"},
+{id:"notes",name:"Notes",emoji:"📝",color:"#ca8a04",size:2,category:"Productivity",kind:"notes"}
 ];
 
-function openStore(){
- go(dev().email?"store":"signin");
+let state,page="home",historyStack=[],recentPages=[],dbPromise,objectUrls=new Set(),installJobs={};
+
+function uid(){
+return "cp_"+Math.random().toString(36).slice(2,10)+"_"+Date.now().toString(36);
 }
+
+function makeDevice(n){
+return {id:uid(),name:"Cloud Phone "+n,region:"US",email:"",apps:[],files:[]};
+}
+
+function normalizeDevice(d,n){
+if(!d||typeof d!=="object")d={};
+return {
+id:typeof d.id==="string"?d.id:uid(),
+name:typeof d.name==="string"&&d.name.trim()?d.name:"Cloud Phone "+n,
+region:["US","UK","SG","DE"].includes(d.region)?d.region:"US",
+email:typeof d.email==="string"?d.email:"",
+apps:Array.isArray(d.apps)?d.apps.filter(a=>a&&typeof a==="object").map(a=>({
+id:String(a.id||uid()),
+name:String(a.name||"Imported App"),
+emoji:String(a.emoji||a.icon||"📦"),
+color:String(a.color||"#475569"),
+kind:String(a.kind||"shortcut"),
+fileId:a.fileId||null
+})):[],
+files:Array.isArray(d.files)?d.files.filter(f=>f&&typeof f==="object").map(f=>({
+id:String(f.id||uid()),
+name:String(f.name||"file"),
+type:String(f.type||"application/octet-stream"),
+size:Number(f.size)||0
+})):[]
+};
+}
+
+function readState(){
+let fallback=makeDevice(1);
+try{
+const raw=localStorage.getItem(STORAGE_KEY);
+if(!raw)return {active:fallback.id,devices:[fallback]};
+const parsed=JSON.parse(raw);
+const list=Array.isArray(parsed.devices)?parsed.devices:[];
+const devices=list.map(normalizeDevice);
+if(!devices.length)devices.push(fallback);
+const active=devices.some(d=>d.id===parsed.active)?parsed.active:devices[0].id;
+return {active,devices};
+}catch(err){
+return {active:fallback.id,devices:[fallback]};
+}
+}
+
+state=readState();
+
+function activeDevice(){
+return state.devices.find(d=>d.id===state.active)||state.devices[0];
+}
+
+function persist(){
+try{
+localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+return true;
+}catch(e){
+toast("Browser storage is full. Remove some files or apps.");
+return false;
+}
+}
+
+function safe(s){
+return String(s??"").replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+function toast(msg){
+const el=document.getElementById("toast");
+el.textContent=msg;
+el.classList.remove("hidden");
+clearTimeout(toast.timer);
+toast.timer=setTimeout(()=>el.classList.add("hidden"),2600);
+}
+
+function icon(emoji,color){
+return `<div class="appicon" style="background:${safe(color||"#334155")}">${safe(emoji||"📦")}</div>`;
+}
+
+function tile(emoji,name,action,color){
+return `<button class="tile" type="button" onclick="${action}">${icon(emoji,color)}<p>${safe(name)}</p></button>`;
+}
+
+function go(next){
+if(page!==next){
+historyStack.push(page);
+if(!recentPages.includes(page))recentPages.unshift(page);
+recentPages=recentPages.slice(0,8);
+}
+page=next;
+render();
+}
+
+function home(){historyStack=[];page="home";render()}
+function back(){if(historyStack.length){page=historyStack.pop();render()}else home()}
+function openStore(){go(activeDevice().email?"store":"signin")}
+
+/* Device selector and outer controls */
+function syncHeader(){
+const select=document.getElementById("profileSelect");
+select.innerHTML=state.devices.map(d=>`<option value="${safe(d.id)}">${safe(d.name)}</option>`).join("");
+select.value=activeDevice().id;
+document.getElementById("regionSelect").value=activeDevice().region;
+}
+
+document.getElementById("profileSelect").addEventListener("change",e=>{
+if(state.devices.some(d=>d.id===e.target.value)){
+state.active=e.target.value;persist();home();toast("Device switched");
+}
+});
+
+document.getElementById("regionSelect").addEventListener("change",e=>{
+activeDevice().region=e.target.value;persist();render();toast("Region updated (simulation only)");
+});
+
+document.getElementById("newDeviceBtn").addEventListener("click",()=>{
+const d=makeDevice(state.devices.length+1);
+state.devices.push(d);state.active=d.id;persist();home();toast("Fresh device profile created");
+});
+
+document.getElementById("backBtn").addEventListener("click",back);
+document.getElementById("homeBtn").addEventListener("click",home);
+document.getElementById("recentBtn").addEventListener("click",()=>go("recent"));
+
+/* Home screen */
+function homeView(){
+const d=activeDevice();
+const builtins=[
+tile("▶️","Play Store","openStore()","#2563eb"),
+tile("🌐","Browser","go('browser')","#0284c7"),
+tile("📁","Add Files","go('files')","#b45309"),
+tile("⚙️","Settings","go('settings')","#475569")
+];
+const installed=d.apps.map(a=>tile(a.emoji,a.name,`launchApp('${safe(a.id)}')`,a.color));
+
+return `<div class="p-4 pt-10 min-h-full" style="background:linear-gradient(160deg,#172b49,#101827 65%)">
+<div class="text-center pt-5 pb-8">
+<div class="text-5xl mb-3">☁️</div>
+<h1 class="text-2xl font-bold">CloudPhone</h1>
+<p class="muted mt-2">${safe(d.name)} · ${safe(d.region)}</p>
+<p id="homeDate" class="muted mt-2"></p>
+</div>
+<div class="appgrid">${builtins.join("")}</div>
+<div class="mt-9">
+<h3 class="text-xs font-bold text-slate-300 mb-5">INSTALLED APPLICATIONS</h3>
+${installed.length?`<div class="appgrid">${installed.join("")}</div>`:`<div class="card text-center"><p class="muted">No apps installed yet.</p><button class="btn mt-3" onclick="openStore()">Explore Play Store</button></div>`}
+</div>
+<div class="text-center mt-9 muted">CloudOS Virtual Smartphone · ${d.apps.length} apps · ${d.files.length} files</div>
+</div>`;
+}
+
+/* Demo Play Store sign-in. Never collect a real Google password. */
 function signinView(){
- return `<div class="p-5 pt-12">
-  <div class="text-center mb-7">
-   <div class="text-5xl">▶️</div>
-   <h2 class="text-2xl font-bold mt-4">Play Store</h2>
-   <p class="muted mt-2">Demo account sign-in</p>
-  </div>
-  <div class="card space-y-4">
-   <h3 class="font-bold">Welcome</h3>
-   <p class="muted">Enter an email to create a local demo profile. This is not Google Sign-In.</p>
-   <input id="email" class="field" type="email" placeholder="Email address">
-   <button class="btn w-full" onclick="login()">Continue</button>
-   <button class="btn2 w-full" onclick="home()">Cancel</button>
-  </div>
- </div>`;
+return `<div class="p-5 pt-12">
+<div class="text-center mb-7">
+<div class="text-5xl">▶️</div>
+<h2 class="text-2xl font-bold mt-4">Play Store</h2>
+<p class="muted mt-2">Demo account sign-in</p>
+</div>
+<div class="card space-y-4">
+<h3 class="font-bold">Welcome</h3>
+<p class="muted">Use an email to link a local demo profile. This is not Google authentication. Never enter your real Google password here.</p>
+<label class="muted" for="demoEmail">Email address</label>
+<input id="demoEmail" class="field" type="email" autocomplete="off" placeholder="name@example.com">
+<button class="btn w-full" onclick="demoSignIn()">Continue</button>
+<button class="btn2 w-full" onclick="home()">Cancel</button>
+</div>
+</div>`;
 }
-function login(){
- let e=document.getElementById("email").value.trim();
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)){
-  notify("Enter a valid email");return;
- }
- dev().email=e;save();page="store";render();
+
+function demoSignIn(){
+const el=document.getElementById("demoEmail"),email=el.value.trim();
+if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){toast("Enter a valid email address");return}
+activeDevice().email=email;
+persist();page="store";render();toast("Demo account linked");
 }
+
 function storeView(){
- return `<div class="p-4 pt-7">
-  <div class="flex justify-between items-center mb-5">
-   <div><h2 class="text-xl font-bold">Play Store</h2>
-    <p class="muted">Explore apps</p></div>
-   <span class="text-2xl">▶️</span>
-  </div>
-  <div class="card mb-5">
-   <p class="muted">Local demo profile</p>
-   <p class="text-xs mt-1 break-all">${esc(dev().email)}</p>
-   <button class="text-blue-400 text-xs mt-2" onclick="logout()">Sign out</button>
-  </div>
-  <input class="field mb-4" id="search" placeholder="🔍 Search apps..."
-   oninput="filterStore(this.value)">
-  <div id="catalogList">${catalog.map(storeItem).join("")}</div>
- </div>`;
+const d=activeDevice();
+return `<div class="p-4 pt-8">
+<div class="flex justify-between items-center mb-4">
+<div><h2 class="text-xl font-bold">Play Store</h2><p class="muted">Demo app catalog</p></div>
+<span class="text-3xl">▶️</span>
+</div>
+<div class="card mb-4">
+<p class="muted">Linked demo email</p>
+<p class="text-xs mt-1 break-all">${safe(d.email||"Not linked")}</p>
+<button class="text-blue-400 text-xs mt-2" onclick="signOutDemo()">Sign out</button>
+</div>
+<input id="storeSearch" class="field mb-4" placeholder="🔍 Search apps or categories..." oninput="filterCatalog(this.value)">
+<div id="catalogResults">${CATALOG.map(storeItem).join("")}</div>
+</div>`;
 }
+
 function storeItem(a){
- let installed=dev().apps.some(x=>x.id===a.id);
- return `<div class="card mb-3">
-  <div class="flex gap-3 items-center">
-   ${icon(a.icon,a.color)}
-   <div class="flex-1 min-w-0">
-    <b class="text-sm">${esc(a.name)}</b>
-    <p class="muted">${esc(a.category)} · ${a.size} MB</p>
-   </div>
-   <button class="${installed?"btn2":"btn"}"
-    ${installed?"disabled":""}
-    onclick="install('${a.id}')">${installed?"Open":"Install"}</button>
-  </div>
-  <p class="muted mt-3">${esc(a.description)}</p>
-  <div id="p-${a.id}" class="hidden mt-3">
-   <div class="flex justify-between muted mb-1">
-    <span id="s-${a.id}">Downloading...</span>
-    <span id="n-${a.id}">0%</span>
-   </div>
-   <div class="progress"><div id="b-${a.id}"></div></div>
-  </div>
- </div>`;
-}
-function filterStore(q){
- let list=document.getElementById("catalogList");
- let results=catalog.filter(a=>
-  (a.name+" "+a.category).toLowerCase().includes(q.toLowerCase()));
- list.innerHTML=results.length?results.map(storeItem).join(""):
-  '<p class="muted text-center p-6">No apps found</p>';
-}
-function logout(){dev().email="";save();page="signin";render()}
-function install(id){
- let a=catalog.find(x=>x.id===id);
- if(!a||dev().apps.some(x=>x.id===id))return;
- let p=document.getElementById("p-"+id);
- if(!p)return;
- p.classList.remove("hidden");
- let n=0;
- let button=[...document.querySelectorAll("button")].find(x=>
-  x.getAttribute("onclick")===`install('${id}')`);
- if(button)button.disabled=true;
- timers[id]=setInterval(()=>{
-  n=Math.min(100,n+Math.ceil(Math.random()*12));
-  let bar=document.getElementById("b-"+id);
-  if(!bar){clearInterval(timers[id]);return}
-  bar.style.width=n+"%";
-  document.getElementById("n-"+id).textContent=n+"%";
-  if(n>=100){
-   clearInterval(timers[id]);
-   dev().apps.push({...a});
-   save();
-   document.getElementById("s-"+id).textContent="Installed";
-   if(button){button.textContent="Open";button.disabled=false;
-    button.onclick=()=>launch(id);button.removeAttribute("onclick");}
-   notify(a.name+" installed");
-  }
- },170);
+const installed=activeDevice().apps.some(x=>x.id===a.id);
+return `<div class="card mb-3">
+<div class="flex items-center gap-3">
+${icon(a.emoji,a.color)}
+<div class="flex-1 min-w-0"><b>${safe(a.name)}</b><p class="muted">${safe(a.category)} · ${a.size} MB</p></div>
+<button class="${installed?"btn2":"btn"}" ${installed?"disabled":""} onclick="installApp('${a.id}')">${installed?"Installed":"Install"}</button>
+</div>
+<div id="progress_${a.id}" class="hidden mt-3">
+<div class="flex justify-between muted mb-1">
+<span id="status_${a.id}">Downloading…</span><span id="percent_${a.id}">0%</span>
+</div>
+<div class="progress"><div id="bar_${a.id}"></div></div>
+</div>
+</div>`;
 }
 
-/* APP LAUNCHER */
+function filterCatalog(q){
+const results=CATALOG.filter(a=>(a.name+" "+a.category).toLowerCase().includes(q.toLowerCase()));
+document.getElementById("catalogResults").innerHTML=results.length?results.map(storeItem).join(""):'<p class="muted text-center p-6">No matching apps.</p>';
+}
 
-function launch(id){go("app:"+id)}
+function signOutDemo(){activeDevice().email="";persist();go("signin")}
+
+/* Installation progress simulation */
+function installApp(appId){
+const app=CATALOG.find(a=>a.id===appId);
+if(!app)return;
+if(activeDevice().apps.some(a=>a.id===appId)){toast("Already installed");return}
+const wrap=document.getElementById("progress_"+appId);
+if(!wrap)return;
+wrap.classList.remove("hidden");
+const btn=[...document.querySelectorAll("button")].find(b=>b.getAttribute("onclick")===`installApp('${appId}')`);
+if(btn)btn.disabled=true;
+let value=0;
+clearInterval(installJobs[appId]);
+installJobs[appId]=setInterval(()=>{
+value=Math.min(100,value+Math.ceil(Math.random()*13));
+const bar=document.getElementById("bar_"+appId),pct=document.getElementById("percent_"+appId);
+if(!bar||!pct){clearInterval(installJobs[appId]);return}
+bar.style.width=value+"%";pct.textContent=value+"%";
+if(value>=100){
+clearInterval(installJobs[appId]);
+const d=activeDevice();
+if(!d.apps.some(x=>x.id===appId))d.apps.push({id:app.id,name:app.name,emoji:app.emoji,color:app.color,kind:app.kind});
+persist();
+const status=document.getElementById("status_"+appId);
+if(status)status.textContent="Installed";
+if(btn){btn.textContent="Installed";btn.className="btn2"}
+toast(app.name+" installed on this device");
+}
+},180);
+}
+ /* Installed demo apps */
+function launchApp(id){
+const app=activeDevice().apps.find(a=>a.id===id);
+if(!app){toast("App not found");return}
+go("app:"+id);
+}
+
 function appView(id){
- let a=dev().apps.find(x=>x.id===id);
- if(!a)return '<div class="p-5">App not found</div>';
- if(id==="calculator")return calculatorView();
- if(id==="notes")return notesView();
- if(id==="whatsapp"||id==="telegram")return chatView(id);
- if(id==="youtube")return videoAppView();
- if(id==="freefire"||id==="pubg")return gameView(a);
- return `<div class="p-5 pt-10 text-center">
-  ${icon(a.icon,a.color)}
-  <h2 class="font-bold text-xl mt-4">${esc(a.name)}</h2>
-  <p class="muted mt-3">Demo application installed on this device.</p>
-  <button class="btn2 mt-5" onclick="home()">Home</button>
- </div>`;
+const a=activeDevice().apps.find(x=>x.id===id);
+if(!a)return `<div class="p-5"><p>App not found.</p><button class="btn mt-3" onclick="home()">Home</button></div>`;
+if(a.kind==="calculator")return calculatorView();
+if(a.kind==="notes")return notesView();
+if(a.kind==="chat")return chatView(a);
+if(a.kind==="video")return videoView();
+if(a.kind==="game")return gameView(a);
+return `<div class="p-5 pt-10 text-center">
+${icon(a.emoji,a.color)}
+<h2 class="font-bold text-xl mt-4">${safe(a.name)}</h2>
+<p class="muted mt-3">This is an installed shortcut. A compatible Android runtime is required to execute native APKs.</p>
+<button class="btn2 mt-5" onclick="home()">Home</button>
+</div>`;
 }
-function calculatorView(){
- return `<div class="p-4 pt-8">
-  <h2 class="font-bold text-xl mb-5">🧮 Calculator</h2>
-  <input id="calc" class="field text-right text-2xl mb-3" readonly value="0">
-  <div class="grid grid-cols-4 gap-2">
-   ${["7","8","9","/","4","5","6","*","1","2","3","-","C","0",".","+","="].map(x=>
-    `<button class="card text-xl p-4" onclick="calcKey('${x}')">${x}</button>`).join("")}
-  </div>
- </div>`;
-}
+
 let calcExpression="";
+
+function calculatorView(){
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-5">🧮 Calculator</h2>
+<input id="calcDisplay" class="field text-right text-2xl mb-3" readonly value="0">
+<div class="grid grid-cols-4 gap-2">
+${["7","8","9","/","4","5","6","*","1","2","3","-","C","0",".","+","="].map(k=>`<button class="card text-xl p-4" onclick="calcKey('${k}')">${k}</button>`).join("")}
+</div>
+</div>`;
+}
+
 function calcKey(k){
- let el=document.getElementById("calc");
- if(!el)return;
- if(k==="C")calcExpression="";
- else if(k==="="){
-  try{
-   if(!/^[0-9+\-*/.() ]+$/.test(calcExpression))throw Error();
-   let result=Function('"use strict";return ('+calcExpression+')')();
-   calcExpression=Number.isFinite(result)?String(result):"";
-  }catch(e){calcExpression=""}
- }else calcExpression+=k;
- el.value=calcExpression||"0";
+const el=document.getElementById("calcDisplay");
+if(!el)return;
+if(k==="C")calcExpression="";
+else if(k==="="){
+try{
+if(!/^[0-9+\-*/.() ]+$/.test(calcExpression))throw Error();
+const n=Function('"use strict";return ('+calcExpression+')')();
+calcExpression=Number.isFinite(n)?String(n):"Error";
+}catch(e){calcExpression="Error"}
+}else{
+if(calcExpression==="Error")calcExpression="";
+calcExpression+=k;
 }
+el.value=calcExpression||"0";
+}
+
 function notesView(){
- return `<div class="p-4 pt-8">
-  <h2 class="font-bold text-xl mb-4">📝 Notes</h2>
-  <textarea id="notes" class="field" rows="14"
-   placeholder="Write your notes here...">${esc(localStorage.getItem("cp_notes_"+dev().id)||"")}</textarea>
-  <button class="btn w-full mt-3" onclick="saveNotes()">Save Notes</button>
- </div>`;
+const key="cp_notes_"+activeDevice().id;
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-4">📝 Notes</h2>
+<textarea id="notesText" class="field" rows="15" placeholder="Write your notes…">${safe(localStorage.getItem(key)||"")}</textarea>
+<button class="btn w-full mt-3" onclick="saveNotes()">Save Notes</button>
+</div>`;
 }
+
 function saveNotes(){
- localStorage.setItem("cp_notes_"+dev().id,document.getElementById("notes").value);
- notify("Notes saved");
+localStorage.setItem("cp_notes_"+activeDevice().id,document.getElementById("notesText").value);
+toast("Notes saved");
 }
-function chatView(id){
- let key="cp_chat_"+dev().id+"_"+id;
- let messages=[];
- try{messages=JSON.parse(localStorage.getItem(key)||"[]")}catch(e){}
- return `<div class="p-4 pt-7">
-  <h2 class="font-bold text-xl mb-4">${id==="whatsapp"?"💬 WhatsApp Demo":"✈️ Telegram Demo"}</h2>
-  <p class="muted mb-3">Local simulated chat. No real messages are sent.</p>
-  <div class="card min-h-72 mb-3 space-y-3" id="messages">
-   ${messages.map(m=>`<div class="text-sm p-2 rounded-lg bg-slate-700">${esc(m)}</div>`).join("")}
-  </div>
-  <div class="flex gap-2">
-   <input id="chatText" class="field" placeholder="Type a message...">
-   <button class="btn" onclick="sendChat('${id}')">Send</button>
-  </div>
- </div>`;
+
+function chatView(a){
+const key="cp_chat_"+activeDevice().id+"_"+a.id;
+let messages=[];
+try{messages=JSON.parse(localStorage.getItem(key)||"[]")}catch(e){}
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-3">${safe(a.emoji)} ${safe(a.name)} Demo</h2>
+<p class="muted mb-3">Local simulated chat. No real messages are sent.</p>
+<div id="chatMessages" class="card min-h-64 mb-3 space-y-2">
+${messages.map(m=>`<p class="bg-slate-700 p-2 rounded-lg text-sm break-words">${safe(m)}</p>`).join("")}
+</div>
+<div class="flex gap-2">
+<input id="chatInput" class="field" placeholder="Type a message…">
+<button class="btn" onclick="sendChat('${a.id}')">Send</button>
+</div>
+</div>`;
 }
+
 function sendChat(id){
- let input=document.getElementById("chatText");
- let text=input.value.trim();if(!text)return;
- let key="cp_chat_"+dev().id+"_"+id;
- let a=[];try{a=JSON.parse(localStorage.getItem(key)||"[]")}catch(e){}
- a.push(text);localStorage.setItem(key,JSON.stringify(a));
- render();
+const input=document.getElementById("chatInput"),message=input.value.trim();
+if(!message)return;
+const key="cp_chat_"+activeDevice().id+"_"+id;
+let arr=[];
+try{arr=JSON.parse(localStorage.getItem(key)||"[]")}catch(e){}
+arr.push(message);
+localStorage.setItem(key,JSON.stringify(arr));
+render();
 }
-function videoAppView(){
- return `<div class="p-4 pt-8">
-  <h2 class="font-bold text-xl mb-4">▶️ Video Demo</h2>
-  <div class="card text-center py-12">
-   <div class="text-5xl">🎬</div>
-   <p class="font-bold mt-4">Video Library</p>
-   <p class="muted mt-2">Import videos in File Manager to play them.</p>
-   <button class="btn mt-4" onclick="go('files')">Open Files</button>
-  </div>
- </div>`;
+
+function videoView(){
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-4">▶️ Video Library</h2>
+<div class="card text-center py-10">
+<div class="text-5xl">🎬</div>
+<p class="mt-3">Open imported media files</p>
+<button class="btn mt-4" onclick="go('files')">Open Files</button>
+</div>
+</div>`;
 }
+
 function gameView(a){
- return `<div class="p-5 pt-12 text-center">
-  ${icon(a.icon,a.color)}
-  <h2 class="font-bold text-xl mt-5">${esc(a.name)}</h2>
-  <p class="muted mt-3">Game launcher demo</p>
-  <div class="card mt-5 py-10">
-   <div class="text-4xl">🎮</div>
-   <p class="text-sm mt-3">Android game runtime is not included.</p>
-  </div>
- </div>`;
+return `<div class="p-5 pt-12 text-center">
+${icon(a.emoji,a.color)}
+<h2 class="font-bold text-xl mt-5">${safe(a.name)}</h2>
+<div class="card mt-5 py-8">
+<div class="text-4xl">🎮</div>
+<p class="muted mt-3">Game shortcut installed. The actual Android game engine is not included in this browser simulator.</p>
+</div>
+</div>`;
 }
 
-/* FILE STORAGE - INDEXEDDB */
+/* IndexedDB file storage */
+function openDB(){
+if(!("indexedDB" in window))return Promise.reject(new Error("IndexedDB unavailable"));
+if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{
+const req=indexedDB.open(DB_NAME,1);
+req.onupgradeneeded=()=>{
+const db=req.result;
+if(!db.objectStoreNames.contains(DB_STORE))db.createObjectStore(DB_STORE,{keyPath:"id"});
+};
+req.onsuccess=()=>resolve(req.result);
+req.onerror=()=>reject(req.error);
+});
+return dbPromise;
+}
 
-let dbPromise;
-function db(){
- if(!dbPromise)dbPromise=new Promise((resolve,reject)=>{
-  let r=indexedDB.open(DB,1);
-  r.onupgradeneeded=()=>{
-   if(!r.result.objectStoreNames.contains("files"))
-    r.result.createObjectStore("files",{keyPath:"id"});
-  };
-  r.onsuccess=()=>resolve(r.result);
-  r.onerror=()=>reject(r.error);
- });
- return dbPromise;
+async function saveBlob(record){
+const db=await openDB();
+return new Promise((resolve,reject)=>{
+const tx=db.transaction(DB_STORE,"readwrite");
+tx.objectStore(DB_STORE).put(record);
+tx.oncomplete=()=>resolve();
+tx.onerror=()=>reject(tx.error);
+});
 }
-async function dbPut(file){
- let database=await db();
- return new Promise((resolve,reject)=>{
-  let tx=database.transaction("files","readwrite");
-  tx.objectStore("files").put(file);
-  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
- });
+
+async function readBlob(id){
+const db=await openDB();
+return new Promise((resolve,reject)=>{
+const tx=db.transaction(DB_STORE,"readonly");
+const req=tx.objectStore(DB_STORE).get(id);
+req.onsuccess=()=>resolve(req.result);
+req.onerror=()=>reject(req.error);
+});
 }
-async function dbGet(id){
- let database=await db();
- return new Promise((resolve,reject)=>{
-  let tx=database.transaction("files","readonly");
-  let r=tx.objectStore("files").get(id);
-  r.onsuccess=()=>resolve(r.result);
-  r.onerror=()=>reject(r.error);
- });
+
+async function deleteBlob(id){
+const db=await openDB();
+return new Promise((resolve,reject)=>{
+const tx=db.transaction(DB_STORE,"readwrite");
+tx.objectStore(DB_STORE).delete(id);
+tx.oncomplete=()=>resolve();
+tx.onerror=()=>reject(tx.error);
+});
 }
-async function dbDelete(id){
- let database=await db();
- return new Promise((resolve,reject)=>{
-  let tx=database.transaction("files","readwrite");
-  tx.objectStore("files").delete(id);
-  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);
- });
+
+function fileEmoji(name){
+const ext=(name.split(".").pop()||"").toLowerCase();
+return ({
+apk:"📦",mp4:"🎬",mov:"🎬",webm:"🎬",
+mp3:"🎵",wav:"🎵",m4a:"🎵",pdf:"📕",
+txt:"📄",doc:"📄",docx:"📄",jpg:"🖼️",
+jpeg:"🖼️",png:"🖼️",webp:"🖼️",gif:"🖼️",
+zip:"🗜️"
+})[ext]||"📁";
 }
-function filesView(){
- return `<div class="p-4 pt-8">
-  <h2 class="font-bold text-xl mb-2">📁 File Manager</h2>
-  <p class="muted mb-5">Import files from your device.</p>
-  <div class="card space-y-3">
-   <div class="text-center text-4xl">📂</div>
-   <input id="filePicker" class="field" type="file" multiple>
-   <p class="muted">APK · MP4 · MP3 · PDF · TXT · DOC · JPG · PNG and other files</p>
-   <button class="btn w-full" onclick="document.getElementById('filePicker').click()">+ Add Files</button>
-   <p class="muted">Files remain in this browser using IndexedDB.</p>
-  </div>
-  <div class="flex justify-between mt-6 mb-3">
-   <h3 class="font-bold">My Files</h3>
-   <span class="muted">${dev().files.length} files</span>
-  </div>
-  <div id="fileList" class="card p-1">
-   ${dev().files.length?dev().files.map(fileRow).join(""):'<p class="muted p-4">No files imported yet.</p>'}
-  </div>
- </div>`;
-}
-function fileRow(f){
- return `<div class="item">
-  <div class="text-2xl">${fileEmoji(f.name)}</div>
-  <div class="flex-1 min-w-0">
-   <p class="text-xs font-bold truncate">${esc(f.name)}</p>
-   <p class="muted">${f.sizeText} · ${esc(f.type)}</p>
-  </div>
-  <button class="text-blue-400 text-xs" onclick="openFile('${f.id}')">Open</button>
- </div>`;
-}
-function fileEmoji(n){
- let x=n.split(".").pop().toLowerCase();
- return ({apk:"📦",mp4:"🎬",mov:"🎬",mp3:"🎵",wav:"🎵",
- pdf:"📕",txt:"📄",doc:"📄",docx:"📄",jpg:"🖼️",jpeg:"🖼️",
- png:"🖼️",webp:"🖼️",zip:"🗜️"})[x]||"📁";
-}
-function bindFiles(){
- let input=document.getElementById("filePicker");
- input.onchange=async()=>{
-  let files=[...input.files];
-  for(let f of files){
-   let fid=id();
-   let meta={id:fid,name:f.name,size:f.size,type:f.type||"Unknown",
-    sizeText:formatSize(f.size)};
-   try{
-    await dbPut({id:fid,device:dev().id,blob:f,name:f.name,type:f.type});
-    dev().files.push(meta);
-   }catch(e){notify("Could not save "+f.name)}
-  }
-  save();render();notify(files.length+" file(s) imported");
- };
-}
+
 function formatSize(n){
- if(n<1024)return n+" B";
- if(n<1048576)return (n/1024).toFixed(1)+" KB";
- return (n/1048576).toFixed(1)+" MB";
+return n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" KB":(n/1048576).toFixed(1)+" MB";
 }
-async function openFile(fid){
- let meta=dev().files.find(x=>x.id===fid);if(!meta)return;
- let f=await dbGet(fid);
- if(!f){notify("File data not found");return}
- if(meta.name.toLowerCase().endsWith(".apk")){
-  go("file:"+fid);return;
- }
- let url=URL.createObjectURL(f.blob);
- objectUrls.push(url);
- go("file:"+fid);
+
+/* File Manager */
+function filesView(){
+const d=activeDevice();
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-2">📁 File Manager</h2>
+<p class="muted mb-5">Import files from your device. File contents are saved in this browser's IndexedDB.</p>
+<div class="card space-y-3">
+<div class="text-center text-4xl">📂</div>
+<input id="filePicker" class="field" type="file" multiple>
+<p class="muted">APK · MP4 · MP3 · PDF · TXT · DOC · JPG · PNG and other file types.</p>
+<button class="btn w-full" onclick="chooseFiles()">Add selected files</button>
+</div>
+<div class="flex justify-between mt-6 mb-3">
+<h3 class="font-bold">My Files</h3>
+<span class="muted">${d.files.length} files</span>
+</div>
+<div class="card p-2">
+${d.files.length?d.files.map(f=>`
+<div class="rowitem">
+<span class="text-2xl">${fileEmoji(f.name)}</span>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold truncate">${safe(f.name)}</p>
+<p class="muted">${formatSize(f.size)}</p>
+</div>
+<button class="text-blue-400 text-xs" onclick="openFile('${safe(f.id)}')">Open</button>
+<button class="danger text-xs" onclick="removeImportedFile('${safe(f.id)}')">×</button>
+</div>`).join(""):'<p class="muted p-4 text-center">No files imported yet.</p>'}
+</div>
+</div>`;
 }
+
+function chooseFiles(){
+const input=document.getElementById("filePicker");
+const files=[...(input?.files||[])];
+if(!files.length){toast("Choose one or more files first");return}
+importFiles(files);
+}
+
+async function importFiles(files){
+let added=0;
+for(const file of files){
+const fid=uid();
+try{
+await saveBlob({
+id:fid,
+deviceId:activeDevice().id,
+name:file.name,
+type:file.type||"application/octet-stream",
+blob:file
+});
+activeDevice().files.push({
+id:fid,
+name:file.name,
+type:file.type||"application/octet-stream",
+size:file.size
+});
+added++;
+}catch(err){
+console.error(err);
+toast("Could not save "+file.name);
+}
+}
+persist();
+render();
+toast(added+" file(s) imported");
+}
+
+async function openFile(fid){go("file:"+fid)}
+
 async function fileView(fid){
- let meta=dev().files.find(x=>x.id===fid);
- if(!meta)return '<div class="p-5">File not found</div>';
- let f=await dbGet(fid);
- if(!f)return '<div class="p-5">File data not found</div>';
- let url=URL.createObjectURL(f.blob);objectUrls.push(url);
- let ext=meta.name.split(".").pop().toLowerCase();
- let content="";
- if(["jpg","jpeg","png","webp","gif"].includes(ext))
-  content=`<img class="preview mx-auto" src="${url}">`;
- else if(["mp4","webm","mov","ogg"].includes(ext))
-  content=`<video class="w-full" controls playsinline src="${url}"></video>`;
- else if(["mp3","wav","m4a","ogg"].includes(ext))
-  content=`<audio class="w-full mt-8" controls src="${url}"></audio>`;
- else if(["txt","json","csv","html","css","js","md","xml"].includes(ext)){
-  let text=await f.blob.text();
-  content=`<pre class="text-xs whitespace-pre-wrap break-words">${esc(text.slice(0,100000))}</pre>`;
- }else if(ext==="pdf")
-  content=`<iframe src="${url}" style="height:500px"></iframe>`;
- else if(ext==="apk")
-  content=`<div class="text-center py-10">
-   <div class="text-5xl">📦</div><h3 class="font-bold mt-4">APK Package</h3>
-   <p class="muted mt-3">This file can be registered as a simulated app, but cannot be executed as Android software in a browser.</p>
-   <button class="btn mt-5" onclick="registerAPK('${fid}')">Add to Home Screen</button>
-  </div>`;
- else
-  content=`<div class="text-center py-10">
-   <div class="text-5xl">📄</div><p class="muted mt-3">Preview is not available for this file type.</p>
-   <a class="btn inline-block mt-4" href="${url}" download="${esc(meta.name)}">Download File</a>
-  </div>`;
- return `<div class="p-4 pt-7">
-  <button class="text-blue-400 text-sm mb-5" onclick="back()">‹ Back to Files</button>
-  <h2 class="font-bold text-lg mb-2 break-all">${esc(meta.name)}</h2>
-  <p class="muted mb-5">${meta.sizeText}</p>
-  <div class="card overflow-hidden">${content}</div>
-  <button class="btn2 w-full mt-4" onclick="downloadFile('${fid}')">Download / Save</button>
- </div>`;
+const meta=activeDevice().files.find(f=>f.id===fid);
+if(!meta)return `<div class="p-5">File record not found.<button class="btn mt-3" onclick="go('files')">Back</button></div>`;
+
+let record;
+try{record=await readBlob(fid)}catch(e){record=null}
+if(!record?.blob)return `<div class="p-5">File data is unavailable.<button class="btn mt-3" onclick="go('files')">Back</button></div>`;
+
+const url=URL.createObjectURL(record.blob);
+objectUrls.add(url);
+const ext=(meta.name.split(".").pop()||"").toLowerCase();
+let body="";
+
+if(["png","jpg","jpeg","webp","gif","bmp"].includes(ext)){
+body=`<img class="preview mx-auto" src="${url}" alt="${safe(meta.name)}">`;
 }
-async function downloadFile(fid){
- let f=await dbGet(fid);if(!f)return;
- let url=URL.createObjectURL(f.blob);
- let a=document.createElement("a");a.href=url;a.download=f.name;
- a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+else if(["mp4","webm","ogg","mov"].includes(ext)){
+body=`<video class="w-full" controls playsinline src="${url}"></video>`;
 }
-async function registerAPK(fid){
- let f=await dbGet(fid);if(!f)return;
- let name=f.name.replace(/\.apk$/i,"");
- if(dev().apps.some(a=>a.fileId===fid)){notify("Already added");return}
- dev().apps.push({id:id(),fileId:fid,name,icon:"📦",
-  color:"#6d28d9",size:1,category:"Imported APK"});
- save();home();notify("APK shortcut added to Home");
+else if(["mp3","wav","m4a","aac","oga"].includes(ext)){
+body=`<audio class="w-full mt-8" controls src="${url}"></audio>`;
 }
+else if(["txt","json","csv","md","xml","html","css","js"].includes(ext)){
+let text=await record.blob.text();
+body=`<pre class="text-xs whitespace-pre-wrap break-words max-h-96 overflow-auto">${safe(text.slice(0,150000))}</pre>`;
+}
+else if(ext==="pdf"){
+body=`<iframe title="PDF preview" src="${url}" style="height:480px"></iframe>`;
+}
+else if(ext==="apk"){
+body=`<div class="text-center py-8">
+<div class="text-5xl">📦</div>
+<h3 class="font-bold mt-4">APK package</h3>
+<p class="muted mt-3">A browser cannot run Android APK files. You can add a shortcut to the home screen.</p>
+<button class="btn mt-4" onclick="addAPKShortcut('${safe(fid)}')">Add Home Screen Shortcut</button>
+</div>`;
+}
+else{
+body=`<div class="text-center py-8"><div class="text-5xl">📄</div><p class="muted mt-3">Preview is not available for this file type.</p></div>`;
+}
+
+return `<div class="p-4 pt-7">
+<button class="text-blue-400 text-sm mb-5" onclick="go('files')">‹ Back to Files</button>
+<h2 class="font-bold text-lg break-all mb-2">${safe(meta.name)}</h2>
+<p class="muted mb-4">${formatSize(meta.size)}</p>
+<div class="card overflow-hidden">${body}</div>
+<button class="btn2 w-full mt-4" onclick="downloadImportedFile('${safe(fid)}')">Download file</button>
+</div>`;
+}
+
+async function downloadImportedFile(fid){
+try{
+const rec=await readBlob(fid);
+if(!rec?.blob)return toast("File not found");
+const url=URL.createObjectURL(rec.blob);
+const a=document.createElement("a");
+a.href=url;a.download=rec.name;a.click();
+setTimeout(()=>URL.revokeObjectURL(url),1500);
+}catch(e){toast("Download failed")}
+}
+
+async function addAPKShortcut(fid){
+const f=activeDevice().files.find(x=>x.id===fid);
+if(!f)return;
+if(activeDevice().apps.some(a=>a.fileId===fid)){toast("Shortcut already exists");return}
+activeDevice().apps.push({
+id:uid(),
+name:f.name.replace(/\.apk$/i,""),
+emoji:"📦",
+color:"#6d28d9",
+kind:"apk-shortcut",
+fileId:fid
+});
+persist();
+home();
+toast("APK shortcut added (not executable here)");
+}
+
+async function removeImportedFile(fid){
+if(!confirm("Delete this imported file?"))return;
+try{await deleteBlob(fid)}catch(e){console.warn(e)}
+activeDevice().files=activeDevice().files.filter(f=>f.id!==fid);
+activeDevice().apps=activeDevice().apps.filter(a=>a.fileId!==fid);
+persist();
+render();
+toast("File removed");
+}
+
+ /* Settings and profile tools */
+function settingsView(){
+const d=activeDevice();
+
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-5">⚙️ Device Settings</h2>
+
+<div class="card space-y-4">
+<div>
+<label class="muted" for="deviceName">Device name</label>
+<input id="deviceName" class="field mt-2" value="${safe(d.name)}">
+</div>
+
+<button class="btn w-full" onclick="renameDevice()">Save device name</button>
+
+<div>
+<p class="muted mb-2">Region / DNS demo profile</p>
+<select id="settingsRegion" class="field" onchange="setRegion(this.value)">
+<option value="US" ${d.region==="US"?"selected":""}>United States</option>
+<option value="UK" ${d.region==="UK"?"selected":""}>United Kingdom</option>
+<option value="SG" ${d.region==="SG"?"selected":""}>Singapore</option>
+<option value="DE" ${d.region==="DE"?"selected":""}>Germany</option>
+</select>
+</div>
+
+<div>
+<p class="muted">Profile ID</p>
+<p class="text-xs mt-1 break-all">${safe(d.id)}</p>
+</div>
+
+<div>
+<p class="muted">Linked demo email</p>
+<p class="text-xs mt-1 break-all">${safe(d.email||"Not linked")}</p>
+</div>
+
+<div>
+<p class="muted">Network</p>
+<p class="text-xs mt-1">Simulation only — no real IP routing or DNS changes.</p>
+</div>
+
+<div>
+<p class="muted">Installed apps / Imported files</p>
+<p class="text-lg font-bold">${d.apps.length} / ${d.files.length}</p>
+</div>
+</div>
+
+<h3 class="font-bold mt-6 mb-3">Device Profiles</h3>
+
+<div class="card space-y-3">
+${state.devices.map(x=>`
+<div class="flex items-center justify-between gap-2">
+<div class="min-w-0">
+<p class="text-sm truncate">${safe(x.name)}</p>
+<p class="muted">${x.region} · ${x.apps.length} apps</p>
+</div>
+<button class="btn2" onclick="switchDevice('${safe(x.id)}')">${x.id===d.id?"Active":"Switch"}</button>
+</div>
+`).join("")}
+<button class="btn w-full" onclick="createDevice()">+ New Device</button>
+</div>
+
+<div class="card mt-4 space-y-3">
+<button class="btn2 w-full" onclick="resetDevice()">Reset current device</button>
+<button class="danger text-xs w-full py-2" onclick="deleteDevice()">Delete current device</button>
+</div>
+</div>`;
+}
+
+function renameDevice(){
+const name=document.getElementById("deviceName").value.trim();
+if(!name)return toast("Enter a device name");
+activeDevice().name=name.slice(0,40);
+persist();
+syncHeader();
+render();
+toast("Device renamed");
+}
+
+function setRegion(region){
+activeDevice().region=region;
+persist();
+syncHeader();
+render();
+toast("Region updated (demo only)");
+}
+
+function switchDevice(id){
+if(!state.devices.some(d=>d.id===id))return;
+state.active=id;
+persist();
+syncHeader();
+home();
+toast("Device switched");
+}
+
+function createDevice(){
+const d=makeDevice(state.devices.length+1);
+state.devices.push(d);
+state.active=d.id;
+persist();
+syncHeader();
+home();
+toast("New device created");
+}
+
+async function resetDevice(){
+if(!confirm("Remove this device's installed apps, files and demo account?"))return;
+const d=activeDevice();
+for(const f of d.files){
+try{await deleteBlob(f.id)}catch(e){}
+}
+d.apps=[];
+d.files=[];
+d.email="";
+persist();
+home();
+toast("Device reset");
+}
+
+async function deleteDevice(){
+if(state.devices.length<=1)return toast("At least one device must remain");
+if(!confirm("Permanently delete this device profile and its file records?"))return;
+
+const d=activeDevice();
+for(const f of d.files){
+try{await deleteBlob(f.id)}catch(e){}
+}
+
+state.devices=state.devices.filter(x=>x.id!==d.id);
+state.active=state.devices[0].id;
+persist();
+syncHeader();
+home();
+toast("Device deleted");
+}
+
+/* Internal Browser */
+function browserView(){
+return `<div class="p-3 pt-8 h-full flex flex-col">
+<h2 class="font-bold text-lg mb-3">🌐 Internal Browser</h2>
+
+<div class="flex gap-2 mb-3">
+<input id="browserAddress" class="field" placeholder="https://example.com">
+<button class="btn" onclick="navigateBrowser()">Go</button>
+</div>
+
+<div class="card mb-2">
+<p class="muted">Some websites refuse to load inside embedded frames. No proxy or real cloud browsing is provided.</p>
+</div>
+
+<div id="browserFrame" class="flex-1 bg-white rounded-xl overflow-hidden min-h-64">
+<div class="text-slate-700 text-center p-10">🔒 Enter a website address</div>
+</div>
+</div>`;
+}
+
+function navigateBrowser(){
+let raw=document.getElementById("browserAddress").value.trim();
+if(!raw)return toast("Enter a website address");
+
+if(!/^https?:\/\//i.test(raw))raw="https://"+raw;
+
+let url;
+try{url=new URL(raw)}catch(e){return toast("Invalid address")}
+
+if(!["http:","https:"].includes(url.protocol))return toast("Only HTTP and HTTPS are supported");
+
+document.getElementById("browserFrame").innerHTML=
+`<iframe title="Internal browser" referrerpolicy="no-referrer" src="${safe(url.href)}"></iframe>`;
+}
+
+/* Recent apps */
+function recentView(){
+return `<div class="p-4 pt-8">
+<h2 class="font-bold text-xl mb-5">Recent Apps</h2>
+<div class="card">
+${recentPages.length?recentPages.map(p=>`
+<div class="rowitem">
+<span class="flex-1 text-sm">${safe(p==="home"?"Home":p.replace("app:",""))}</span>
+<button class="text-blue-400 text-xs" onclick="go('${safe(p)}')">Open</button>
+</div>
+`).join(""):'<p class="muted p-3">No recent apps.</p>'}
+</div>
+<button class="btn w-full mt-4" onclick="home()">Home</button>
+</div>`;
+}
+
+/* Defensive renderer */
+function render(){
+syncHeader();
+const view=document.getElementById("view");
+
+try{
+if(page.startsWith("file:")){
+view.innerHTML='<div class="p-5 muted">Loading file…</div>';
+fileView(page.slice(5)).then(html=>{
+if(page==="file:"+page.slice(5))view.innerHTML=html;
+}).catch(err=>showRenderError(err));
+return;
+}
+
+if(page.startsWith("app:")){
+view.innerHTML=appView(page.slice(4));
+return;
+}
+
+const routes={
+home:homeView,
+signin:signinView,
+store:storeView,
+files:filesView,
+settings:settingsView,
+browser:browserView,
+recent:recentView
+};
+
+view.innerHTML=(routes[page]||homeView)();
+
+}catch(err){
+showRenderError(err);
+}
+}
+
+function showRenderError(err){
+console.error("CloudPhone render error:",err);
+
+document.getElementById("view").innerHTML=`
+<div class="p-5 pt-12">
+<div class="text-4xl mb-3">⚠️</div>
+<h2 class="font-bold text-lg">This screen could not load</h2>
+<p class="muted mt-2">Your saved profiles have not been intentionally deleted. Return Home or reload the page.</p>
+<button class="btn w-full mt-5" onclick="home()">Recover Home Screen</button>
+<button class="btn2 w-full mt-2" onclick="repairStorage()">Repair saved profile data</button>
+</div>`;
+}
+
+function repairStorage(){
+state=readState();
+state.devices=state.devices.map(normalizeDevice);
+
+if(!state.devices.length){
+const d=makeDevice(1);
+state.devices=[d];
+state.active=d.id;
+}
+
+if(!state.devices.some(d=>d.id===state.active)){
+state.active=state.devices[0].id;
+}
+
+persist();
+syncHeader();
+home();
+toast("Profile data checked and repaired");
+}
+
+/* Startup and live clock */
+function tick(){
+const now=new Date();
+
+document.getElementById("clock").textContent=
+now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+
+const date=document.getElementById("homeDate");
+if(date)date.textContent=now.toDateString();
+}
+
+window.addEventListener("error",e=>{
+console.error(e.error||e.message);
+});
+
+window.addEventListener("unhandledrejection",e=>{
+console.error(e.reason);
+toast("A background task failed. Other screens remain available.");
+});
+
+persist();
+syncHeader();
+render();
+tick();
+setInterval(tick,1000);
+
+</script>
+</body>
+</html>
